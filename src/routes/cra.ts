@@ -50,6 +50,7 @@ router.post('/check', async (req: Request, res: Response) => {
 
   try {
     const geocode = await geocodeAddress(address);
+    console.log('geocode', JSON.stringify(geocode));
     if (!geocode) {
       return res.status(404).json({
         error: 'Address not found',
@@ -114,6 +115,10 @@ async function geocodeAddress(address: Address) {
   const resp = await fetch(url, { timeout: 10000 } as any);
   if (!resp.ok) return null;
   const data = await resp.json();
+
+  console.log('--------------------------------');
+  console.log('geocodeAddress data', JSON.stringify(data, null, 2));
+  console.log('--------------------------------');
 
   const matches = data?.result?.addressMatches;
   if (!matches?.length) return null;

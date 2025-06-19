@@ -1,4 +1,4 @@
-# CRA Eligibility Service
+# CRA Eligibility Address Checker
 
 A lightweight web API that tells you whether a given US address is located in a **Low-to-Moderate-Income (LMI) census tract** and therefore qualifies under the **Community Reinvestment Act (CRA)**.
 

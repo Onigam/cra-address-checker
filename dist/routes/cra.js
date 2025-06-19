@@ -26,31 +26,32 @@ router.post('/check', async (req, res) => {
     const address = (_a = req.body) === null || _a === void 0 ? void 0 : _a.address;
     if (!address) {
         return res.status(400).json({
-            error: 'Adresse requise',
-            message: 'Le champ "address" est obligatoire',
+            error: 'Address required',
+            message: 'The "address" field is required',
         });
     }
     const requiredFields = ['street', 'city', 'state'];
     const missingFields = requiredFields.filter((f) => !address[f]);
     if (missingFields.length) {
         return res.status(400).json({
-            error: 'Champs manquants',
-            message: `Les champs suivants sont obligatoires: ${missingFields.join(', ')}`,
+            error: 'Missing fields',
+            message: `The following fields are required: ${missingFields.join(', ')}`,
         });
     }
     try {
         const geocode = await geocodeAddress(address);
+        console.log('geocode', JSON.stringify(geocode));
         if (!geocode) {
             return res.status(404).json({
-                error: 'Adresse non trouvée',
-                message: "Impossible de géocoder l'adresse fournie",
+                error: 'Address not found',
+                message: 'Unable to geocode the provided address',
             });
         }
         const lmi = await getLmiData(geocode.geoid);
         if (!lmi) {
             return res.status(404).json({
-                error: 'Données LMI non disponibles',
-                message: 'Impossible de récupérer les données LMI pour ce secteur de recensement',
+                error: 'LMI data not available',
+                message: 'Unable to retrieve LMI data for this census tract',
             });
         }
         const responseData = {
@@ -74,10 +75,10 @@ router.post('/check', async (req, res) => {
         return res.json(responseData);
     }
     catch (err) {
-        console.error('Erreur lors de la vérification CRA:', err);
+        console.error('Error during CRA check:', err);
         return res.status(500).json({
-            error: 'Erreur interne du serveur',
-            message: "Une erreur inattendue s'est produite",
+            error: 'Internal server error',
+            message: 'An unexpected error occurred',
         });
     }
 });
@@ -102,6 +103,9 @@ async function geocodeAddress(address) {
     if (!resp.ok)
         return null;
     const data = await resp.json();
+    console.log('--------------------------------');
+    console.log('geocodeAddress data', JSON.stringify(data, null, 2));
+    console.log('--------------------------------');
     const matches = (_a = data === null || data === void 0 ? void 0 : data.result) === null || _a === void 0 ? void 0 : _a.addressMatches;
     if (!(matches === null || matches === void 0 ? void 0 : matches.length))
         return null;
@@ -120,6 +124,29 @@ async function geocodeAddress(address) {
         matched_address: match.matchedAddress,
     };
 }
+/**
+ * HUD LMI API URL
+
+  ArcGIS REST API URL from HUD for LMI data by census tract is:
+
+https://services.arcgis.com/VTyQ9soqVukalItT/arcgis/rest/services/Low_to_Moderate_Income_Population_by_Tract/FeatureServer/4/query
+
+Available fields include:
+- GEOID: Census tract identifier
+- STATE: State
+- COUNTY: County
+- TRACT: Census tract
+- LOWMOD: Low/moderate income population
+- LOWMODUNIV: Total population
+- LOWMODPCT: LMI percentage
+- UCLMOD: Urban LMI population
+- UCLMODU: Total urban population
+- UCLMODPCT: Urban LMI percentage
+
+Example query URL:
+https://services.arcgis.com/VTyQ9soqVukalItT/arcgis/rest/services/Low_to_Moderate_Income_Population_by_Tract/FeatureServer/4/query?where=1%3D1&outFields=*&outSR=4326&f=json
+
+ * */
 async function getLmiData(geoid) {
     var _a, _b, _c, _d;
     const params = new URLSearchParams({
