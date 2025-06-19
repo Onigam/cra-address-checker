@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRA Eligibility Service</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #34495e;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .result.eligible {
+            background-color: #d5f4e6;
+            border: 1px solid #27ae60;
+        }
+
+        .result.not-eligible {
+            background-color: #fadbd8;
+            border: 1px solid #e74c3c;
+        }
+
+        .result.error {
+            background-color: #fdeaa7;
+            border: 1px solid #f39c12;
+        }
+
+        .result-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .result-details {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .loading {
+            text-align: center;
+            color: #7f8c8d;
+        }
+
+        .api-info {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+        }
+
+        .api-info h3 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+
+        .api-info code {
+            background-color: #34495e;
+            color: white;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        .api-info pre {
+            background-color: #34495e;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>CRA Eligibility Service</h1>
+        <p style="text-align: center; color: #7f8c8d; margin-bottom: 30px;">
+            Check whether an address is eligible under the Community Reinvestment Act (CRA) by determining if it lies
+            within a low- or moderate-income (LMI) area.
+        </p>
+
+        <form id="craForm">
+            <div class="form-group">
+                <label for="street">Street address *</label>
+                <input type="text" id="street" name="street" required placeholder="Ex: 1600 Amphitheatre Parkway">
+            </div>
+
+            <div class="form-group">
+                <label for="city">City *</label>
+                <input type="text" id="city" name="city" required placeholder="Ex: Mountain View">
+            </div>
+
+            <div class="form-group">
+                <label for="state">State *</label>
+                <input type="text" id="state" name="state" required placeholder="Ex: CA">
+            </div>
+
+            <div class="form-group">
+                <label for="zip">ZIP code (optional)</label>
+                <input type="text" id="zip" name="zip" placeholder="Ex: 94043">
+            </div>
+
+            <button type="submit" id="submitBtn">Check CRA Eligibility</button>
+        </form>
+
+        <div id="loading" class="loading" style="display: none;">
+            <p>Checking...</p>
+        </div>
+
+        <div id="result" class="result">
+            <div class="result-title" id="resultTitle"></div>
+            <div class="result-details" id="resultDetails"></div>
+        </div>
+
+        <div class="api-info">
+            <h3>API Usage</h3>
+            <p>This service exposes a REST API to verify CRA eligibility for an address.</p>
+
+            <h4>Primary endpoint:</h4>
+            <p><code>POST /api/cra/check</code></p>
+
+            <h4>Example request:</h4>
+            <pre>{
+  "address": {
+    "street": "1600 Amphitheatre Parkway",
+    "city": "Mountain View",
+    "state": "CA",
+    "zip": "94043"
+  }
+}</pre>
+
+            <h4>Service health check:</h4>
+            <p><code>GET /api/cra/health</code></p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('craForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultDetails = document.getElementById('resultDetails');
+
+            // Get form data
+            const formData = new FormData(e.target);
+            const address = {
+                street: formData.get('street'),
+                city: formData.get('city'),
+                state: formData.get('state')
+            };
+
+            if (formData.get('zip')) {
+                address.zip = formData.get('zip');
+            }
+
+            // Show loading
+            submitBtn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/cra/check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ address })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Success
+                    if (data.eligible) {
+                        result.className = 'result eligible';
+                        resultTitle.textContent = '✅ CRA Eligible';
+                    } else {
+                        result.className = 'result not-eligible';
+                        resultTitle.textContent = '❌ Not CRA Eligible';
+                    }
+
+                    resultDetails.innerHTML = `
+                        <strong>Verified address:</strong> ${data.matched_address}<br>
+                        <strong>Census tract:</strong> ${data.census_tract.name} (${data.census_tract.geoid})<br>
+                        <strong>LMI percentage:</strong> ${data.lmi_data.low_mod_income_percentage}%<br>
+                        <strong>Required threshold:</strong> ${data.lmi_data.threshold}%<br>
+                        <strong>LMI population:</strong> ${data.lmi_data.low_mod_income_count} of ${data.lmi_data.total_population}<br>
+                        <strong>Coordinates:</strong> ${data.coordinates.latitude}, ${data.coordinates.longitude}
+                    `;
+                } else {
+                    // Error
+                    result.className = 'result error';
+                    resultTitle.textContent = '⚠️ Error';
+                    resultDetails.innerHTML = `
+                        <strong>Error:</strong> ${data.error}<br>
+                        <strong>Message:</strong> ${data.message}
+                    `;
+                }
+
+                result.style.display = 'block';
+
+            } catch (error) {
+                result.className = 'result error';
+                resultTitle.textContent = '⚠️ Connection error';
+                resultDetails.textContent = 'Unable to reach the service. Please try again later.';
+                result.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+
+</html>
