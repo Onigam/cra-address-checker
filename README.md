@@ -2,6 +2,37 @@
 
 A lightweight web API that tells you whether a given US address is located in a **Low-to-Moderate-Income (LMI) census tract** and therefore qualifies under the **Community Reinvestment Act (CRA)**.
 
+## How It Works (business-level)
+1. You send an address in the following format:
+```json
+{
+  "address": {
+    "street": "1600 Amphitheatre Parkway",
+    "city": "Mountain View",
+    "state": "CA",
+    "zip": "94043"  // optional
+  }
+}
+```
+2. The service asks the **US Census Geocoder API** for the matching census tract (GEOID) -> [Here the documentation]( https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html)
+3. Using that GEOID, it fetches LMI statistics from the **HUD ArcGIS LMI dataset**. (US Department of Housing and Urban Development) -> [Here the documentation](https://services.arcgis.com/VTyQ9soqVukalItT/arcgis/rest/services/Low_to_Moderate_Income_Population_by_Tract/FeatureServer/4/query)
+4. If ≥ 51 % of residents in the tract are low/moderate income, the address is CRA-eligible.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as CRA Service
+    participant G as Census Geocoder
+    participant H as HUD LMI API
+
+    C->>S: POST /api/cra/check { address }
+    S->>G: GET /address?street=…&city=…
+    G-->>S: GEOID + coordinates
+    S->>H: GET /query?where=GEOID
+    H-->>S: LMI statistics
+    S-->>C: JSON { eligible: true/false, details }
+```
+
 ## API Documentation
 
 ### REST Endpoints
@@ -51,43 +82,17 @@ curl -X POST http://localhost:5000/api/cra/check \
 }
 ```
 
-## How It Works (business-level)
-1. You send an address in the following format:
-```json
-{
-  "address": {
-    "street": "1600 Amphitheatre Parkway",
-    "city": "Mountain View",
-    "state": "CA",
-    "zip": "94043"  // optional
-  }
-}
-```
-2. The service asks the **US Census Geocoder API** for the matching census tract (GEOID) -> [Here the documentation]( https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.html)
-3. Using that GEOID, it fetches LMI statistics from the **HUD ArcGIS LMI dataset**. (US Department of Housing and Urban Development) -> [Here the documentation](https://services.arcgis.com/VTyQ9soqVukalItT/arcgis/rest/services/Low_to_Moderate_Income_Population_by_Tract/FeatureServer/4/query)
-4. If ≥ 51 % of residents in the tract are low/moderate income, the address is CRA-eligible.
-
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as CRA Service
-    participant G as Census Geocoder
-    participant H as HUD LMI API
-
-    C->>S: POST /api/cra/check { address }
-    S->>G: GET /address?street=…&city=…
-    G-->>S: GEOID + coordinates
-    S->>H: GET /query?where=GEOID
-    H-->>S: LMI statistics
-    S-->>C: JSON { eligible: true/false, details }
-```
-
 ## Quick Start
 ```bash
 # inside the ts-refactoring folder
 npm install          # install dependencies
-npm run dev          # start dev server on http://localhost:5000
+npm run build          # build the project
+npm run start          # start the server on http://localhost:5000
 ```
+You can play with the API using the `static/index.html` file,
+just open your browser and go to http://localhost:5000.
+
+
 
 ## HUD LMI API URL 
 
